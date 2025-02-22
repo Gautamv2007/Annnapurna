@@ -1,0 +1,151 @@
+/* Mess Menu Container */
+.menu-container {
+  width: 90%;
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-family: "Poppins", sans-serif;
+  text-align: center;
+}
+
+/* Title */
+h2 {
+  font-size: 28px;
+  font-weight: bold;
+  color: #222;
+  padding-bottom: 15px;
+}
+
+/* Dropdown Containers */
+.dropdown-container {
+  margin: 15px 0;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  color: #444;
+  margin-bottom: 5px;
+}
+
+select {
+  width: 80%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+select:hover {
+  transform: scale(1.05);
+}
+
+/* Meal Input */
+.meal-input-container {
+  margin-top: 15px;
+}
+
+.meal-input-container input {
+  width: 80%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.meal-input-container input:hover {
+  transform: scale(1.05);
+}
+
+/* Button Styles */
+.update-btn,
+.otp-btn,
+.submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 80%;
+  padding: 12px;
+  margin: 10px auto;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Individual button styles */
+.update-btn {
+  background: linear-gradient(135deg, #007bff, #6610f2);
+}
+
+.otp-btn {
+  background: linear-gradient(135deg, #ffc107, #ff8800);
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #28a745, #218838);
+}
+
+/* Hover Effects */
+.update-btn:hover,
+.otp-btn:hover,
+.submit-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+
+/* Menu Display */
+.menu-display {
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.menu-day {
+  margin-bottom: 10px;
+}
+
+h3 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #444;
+}
+
+p {
+  font-size: 16px;
+  color: #333;
+}
+
+/* OTP Section */
+.otp-section {
+  margin-top: 15px;
+}
+
+.otp-section input {
+  width: 60%;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 16px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}

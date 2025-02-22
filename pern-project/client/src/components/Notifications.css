@@ -1,0 +1,160 @@
+/* General Styling */
+.notifications {
+  width: 100%;
+  padding: 30px;
+  padding-top: 50px; /* Padding from top */
+  margin-top: 30px; /* Added margin from top to prevent merging with slider */
+  background: linear-gradient(145deg, #e0e0e0, #f4f4f4);
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 9999;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: all 0.3s ease-in-out;
+  margin-bottom: 40px; /* Space at the bottom */
+}
+
+.notifications h2 {
+  color: #333;
+  font-size: 2em;
+  margin-bottom: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.notifications ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notifications li {
+  margin: 15px 0;
+  padding: 15px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  border-left: 5px solid #4caf50;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  max-width: 90%; /* Restrict width */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.notifications li:hover {
+  transform: translateX(10px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.notification-message {
+  font-size: 1.1em;
+  color: #333;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.notifications li:nth-child(odd) {
+  background-color: #f9f9f9;
+}
+
+.notifications li:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+/* Adding animation for the entrance of each notification */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notifications li {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* Media Queries for responsiveness */
+@media (max-width: 768px) {
+  .notifications {
+    padding: 20px;
+    margin: 20px;
+    width: 100%;
+    height: auto; /* Let height be auto */
+    margin-top: 60px; /* Additional margin for smaller screens */
+  }
+
+  .notifications h2 {
+    font-size: 1.6em;
+  }
+
+  .notifications li {
+    padding: 12px;
+  }
+}
+/* Container for notifications */
+.notifications-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 100px auto 20px; /* Prevents overlap with navbar, ensures it's below the fixed navbar */
+  padding: 20px;
+  background: linear-gradient(145deg, #f3f4f6, #e0e0e0);
+  border-radius: 15px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Notifications title */
+.notifications-container h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* List styling */
+.notifications-container ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Individual notification items */
+.notifications-container li {
+  padding: 15px;
+  margin: 10px 0;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1.1rem;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Hover effect on notification items */
+.notifications-container li:hover {
+  background-color: #f7f7f7;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsiveness for smaller screens */
+@media (max-width: 768px) {
+  .notifications-container {
+    padding: 15px;
+  }
+
+  .notifications-container h2 {
+    font-size: 1.5rem;
+  }
+
+  .notifications-container li {
+    font-size: 1rem;
+    padding: 10px;
+  }
+}

@@ -1,0 +1,28 @@
+/* Ensure full page height */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Wrapper ensures the footer is pushed to the bottom */
+.homepage-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Full viewport height */
+}
+
+/* Pushes footer to the bottom */
+.homepage-content {
+  flex: 1; /* Makes content expand and push footer down */
+}
+
+/* Footer Styling */
+.footer {
+  width: 100%;
+  background: rgba(34, 34, 34, 0.9);
+  color: #fff;
+  padding: 30px 20px;
+  text-align: center;
+  box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.2);
+}

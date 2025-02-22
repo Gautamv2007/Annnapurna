@@ -1,0 +1,126 @@
+/* Footer Wrapper */
+#custom-footer-wrapper {
+    background: #222;  /* Dark background */
+    color: #fff;  /* White text for contrast */
+    padding: 40px 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Footer Container - Ensuring Even Spacing */
+#custom-footer-container {
+    max-width: 1200px;
+    width: 100%;
+    display: flex;
+    justify-content: space-around; /* Balanced spacing */
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    padding: 20px 40px;
+    text-align: left;
+    gap: 30px;
+}
+
+/* Individual Sections */
+#custom-footer-contact,
+#custom-footer-links,
+#custom-footer-social {
+    flex: 1;
+    padding: 10px 20px;
+    min-width: 280px;
+}
+
+/* Ensure Text Stays Visible */
+#custom-footer-contact p,
+#custom-footer-links a,
+#custom-footer-bottom p {
+    color: #fff !important;  /* Ensures text is always visible */
+}
+
+/* Center Text in Sections */
+#custom-footer-contact h2,
+#custom-footer-links h2,
+#custom-footer-social h2 {
+    font-size: 20px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    color: #facc15; /* Gold for heading contrast */
+    text-align: center;
+}
+
+/* Quick Links */
+#custom-footer-links ul {
+    list-style: none;
+    padding: 0;
+    text-align: center;
+}
+
+#custom-footer-links li {
+    margin: 6px 0;
+}
+
+#custom-footer-links a {
+    color: #ffffff !important; /* Ensures visibility */
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: color 0.3s ease-in-out;
+}
+
+#custom-footer-links a:hover {
+    color: #facc15;
+}
+
+/* Social Media Icons */
+#custom-footer-social .custom-social-icons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+#custom-footer-social a {
+    font-size: 24px;
+    color: #fff !important; /* White icons for visibility */
+    text-decoration: none;
+    transition: transform 0.3s ease-in-out, color 0.3s;
+}
+
+#custom-footer-social a:hover {
+    transform: translateY(-3px);
+    color: #facc15;
+}
+
+/* Footer Bottom */
+#custom-footer-bottom {
+    background: #111;
+    padding: 12px;
+    text-align: center;
+    color: #ddd !important; /* Light grey for contrast */
+    font-size: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    #custom-footer-container {
+        flex-wrap: wrap;
+        text-align: center;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    #custom-footer-contact,
+    #custom-footer-links,
+    #custom-footer-social {
+        flex: none;
+        width: 90%;
+        text-align: center;
+    }
+
+    #custom-footer-social .custom-social-icons {
+        justify-content: center;
+    }
+}
