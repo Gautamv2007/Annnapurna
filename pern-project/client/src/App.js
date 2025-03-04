@@ -12,7 +12,14 @@ import MessDashboard from "./pages/MessStaffPage";
 import MessMenu from "./pages/MessMenu.js";
 import AttendanceEarnings from "./pages/AttendanceEarnings.js";
 import Reviews from "./pages/Reviews.js";
+import Profile from "./pages/Profile.js";
+import RebateManagement from "./pages/RebateManagement.js";
+import LiveMenu from "./pages/LiveMenu.js";
+import GuestRegistration from "./pages/GuestRegistration.js";
+import WalletIntegration from "./pages/WalletIntegration.js";
+import StudentReviewSystem from "./pages/StudentReviewSystem.js";
 import Footer from './components/Footer';
+import ProfileStudent from "./pages/profile_student";
 import './App.css';
 
 function App() {
@@ -31,6 +38,13 @@ function App() {
         <Route path="/mess-menu" element={<MessMenu />} />
         <Route path="/attendance-earnings" element={<AttendanceEarnings />} />
         <Route path="/reviews" element={<Reviews />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/student/rebate-management" element={<RebateManagement />} />
+        <Route path="/student/live-menu" element={<LiveMenu />} />
+        <Route path="/student/guest-registration" element={<GuestRegistration />} />
+        <Route path="/student/wallet-integration" element={<WalletIntegration />} />
+        <Route path="/student/review-system" element={<StudentReviewSystem />} />
+        <Route path="/student/profile-records" element={<ProfileStudent />} />
       </Routes>
       <Footer />
     </Router>

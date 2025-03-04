@@ -1,0 +1,45 @@
+#student-container {
+    max-width: 500px;
+    margin: 30px auto;
+    text-align: center;
+  }
+  
+  .student-buttons button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 5px;
+  }
+  
+  .student .feature-container {
+    max-width: 500px;
+    margin: 30px auto;
+    padding: 20px;
+    border-radius: 10px;
+    background: #f9f9f9;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  .student .feature-container input, .feature-container select, .feature-container textarea {
+    width: 90%;
+    margin: 10px 0;
+    padding: 10px;
+    font-size: 14px;
+  }
+  
+  .student button {
+    background: #28a745;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  

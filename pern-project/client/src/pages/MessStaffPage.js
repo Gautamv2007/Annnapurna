@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FaUtensils, FaUsers, FaStar } from "react-icons/fa";
+import { FaUtensils, FaUsers, FaStar, FaUser } from "react-icons/fa";
 import "./MessPeople.css";
 
 function MessDashboard() {
@@ -18,6 +18,9 @@ function MessDashboard() {
         </button>
         <button className="dashboard-btn" onClick={() => navigate("/reviews")}>
           <FaStar /> Reviews & Feedback
+        </button>
+        <button className="dashboard-btn" onClick={() => navigate("/profile")}>
+          <FaUser /> View Profile
         </button>
       </div>
     </div>

@@ -1,0 +1,85 @@
+#wallet-container {
+    width: 50%;
+    margin: 50px auto;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    background: #ffffff;
+    text-align: center;
+}
+
+#wallet-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+
+#wallet-starting-balance, 
+#wallet-current-balance {
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+#wallet-amount-input {
+    width: 80%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    margin-top: 10px;
+    text-align: center;
+}
+
+#wallet-error-text {
+    color: red;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+#wallet-add-btn {
+    display: block;
+    width: 80%;
+    max-width: 300px;
+    padding: 12px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 15px auto;
+    transition: background 0.3s;
+}
+
+#wallet-add-btn:hover {
+    background-color: #218838;
+}
+
+#wallet-transaction-title {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#wallet-transaction-table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+}
+
+#wallet-transaction-table th, 
+#wallet-transaction-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+#wallet-th-date {
+    background-color: #007bff;
+    color: white;
+}
+
+#wallet-th-amount {
+    background-color: #007bff;
+    color: white;
+}
