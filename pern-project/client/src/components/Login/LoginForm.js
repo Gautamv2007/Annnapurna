@@ -1,30 +1,44 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock, FaEnvelope } from "react-icons/fa";
+import axios from "axios"; // Import axios for API calls
 import "./LoginForm.css";
-import Footer from "../Footer.js"; // Assuming footer is in components
 
 function LoginForm() {
   const navigate = useNavigate();
   const [role, setRole] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!role) {
-      alert("Please select a valid role!");
-      return;
-    }
+    try {
+        const response = await fetch("http://localhost:5000/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
 
-    navigate(`/${role.toLowerCase().replace(" ", "-")}`); // Auto format route
-  };
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.role);
+        navigate("/dashboard");
+    } catch (error) {
+        alert(error.message);
+    }
+};
+
 
   return (
     <div className="login-page">
       <div className="login-container">
         <h2>Welcome Back!</h2>
         <p className="subtext">Please login to continue</p>
+
+        {error && <p className="error-message">{error}</p>} {/* Display errors */}
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
