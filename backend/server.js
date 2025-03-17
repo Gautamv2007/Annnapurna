@@ -17,7 +17,7 @@ const SECRET_KEY = process.env.SECRET_KEY;
 const db = mysql.createConnection({
     host: "localhost",
     user: "root",
-    password: "root", // Change this to your MySQL password
+    password: "1234", // Change this to your MySQL password
     database: "dining_management"
 });
 
@@ -138,6 +138,40 @@ app.post("/verify-otp", async (req, res) => {
         });
     }
 });
+
+//Login user
+app.post("/login", async (req, res) => {
+    try {
+        const { email, password, role } = req.body;
+        if (!email || !password || !role) {
+            return res.status(400).json({ error: "Email, password, and role are required" });
+        }
+
+        db.query("SELECT * FROM users WHERE email = ? AND role = ?", [email, role], async (err, results) => {
+            if (err) {
+                console.error("Database error:", err);
+                return res.status(500).json({ error: "Database error" });
+            }
+
+            if (results.length === 0) {
+                return res.status(401).json({ error: "Invalid credentials" });
+            }
+
+            const user = results[0];
+            const passwordMatch = await bcrypt.compare(password, user.password);
+            if (!passwordMatch) return res.status(401).json({ error: "Invalid credentials" });
+
+            // ✅ Generate JWT Token
+            const token = jwt.sign({ id: user.id, role: user.role }, process.env.SECRET_KEY, { expiresIn: "1h" });
+
+            return res.json({ message: "Login successful", token, role: user.role });
+        });
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 
 app.listen(5000, () => {
     console.log("Server is running on port 5000");

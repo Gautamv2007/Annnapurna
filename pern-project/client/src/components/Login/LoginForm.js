@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock, FaEnvelope } from "react-icons/fa";
 import axios from "axios"; // Import axios for API calls
@@ -10,26 +10,41 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
+  
+  //This code will prevent the page to 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(""); // Clear previous errors
+
     try {
         const response = await fetch("http://localhost:5000/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, role })
         });
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error);
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (err) {
+            throw new Error("Invalid server response");
+        }
+
+        if (!response.ok) throw new Error(data.error || "Login failed");
 
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.role);
-        navigate("/dashboard");
+
+        navigate("/student", { replace: true }); // Prevent back button going to login
+        window.location.reload(); // Ensure navbar updates instantly
     } catch (error) {
-        alert(error.message);
+        console.error("Login error:", error.message);
+        setError(error.message);
     }
 };
+
+
 
 
   return (
