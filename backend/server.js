@@ -4,18 +4,20 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const SECRET_KEY = "your_secret_key";
+const SECRET_KEY = process.env.SECRET_KEY;
 
 // Database connection
 const db = mysql.createConnection({
     host: "localhost",
     user: "root",
-    password: "1234", // Change this to your MySQL password
+    password: "root", // Change this to your MySQL password
     database: "dining_management"
 });
 
@@ -28,13 +30,17 @@ db.connect(err => {
 });
 
 // Create tables if not exist
-// Create users table
 const createUsersTable = `
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) NOT NULL,
     password VARCHAR(255) NOT NULL,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    semester INT NOT NULL,
+    hostel VARCHAR(255) NOT NULL,
+    room VARCHAR(255) NOT NULL,
     role ENUM('student', 'staff') NOT NULL
 );
 `;
@@ -44,106 +50,95 @@ db.query(createUsersTable, (err, result) => {
     else console.log("Users table checked/created successfully.");
 });
 
-// Create reservations table
-const createReservationsTable = `
-CREATE TABLE IF NOT EXISTS reservations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    guests INT NOT NULL,
-    time DATETIME NOT NULL
-);
-`;
-
-db.query(createReservationsTable, (err, result) => {
-    if (err) console.error("Error creating reservations table:", err);
-    else console.log("Reservations table checked/created successfully.");
+// Email setup
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
 });
 
+// Function to generate a random OTP
+const generateOtp = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
-// Register User
-app.post("/register", async (req, res) => {
-    const { name, email, password, role } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const query = "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)";
-    db.query(query, [name, email, hashedPassword, role], (err, result) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json({ message: "User registered", id: result.insertId });
+// In-memory store for OTPs
+const otpStore = {};
+
+// Send OTP
+app.post("/send-otp", (req, res) => {
+    const { email } = req.body;
+    const otp = generateOtp();
+    otpStore[email] = { otp, retries: 0 };
+
+    // Send OTP email
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Your OTP for Registration',
+        text: `Your OTP for registration is ${otp}`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error("Error sending OTP email:", error);
+            return res.status(500).json({ error: "Error sending OTP email" });
         }
+        console.log('Email sent: ' + info.response);
+        res.json({ message: "OTP sent to email" });
     });
 });
 
-// Login User
-app.post("/login", (req, res) => {
-    const { email, password } = req.body;
-    const query = "SELECT * FROM users WHERE email = ?";
-    
-    db.query(query, [email], async (err, results) => {
-        if (err) return res.status(500).json({ error: "Database error" });
-        if (results.length === 0) return res.status(401).json({ error: "User not found" });
+// Verify OTP and Register User
+app.post("/verify-otp", async (req, res) => {
+    const { name, email, phone, password, username, semester, hostel, room, otp } = req.body;
+    const otpEntry = otpStore[email];
 
-        const user = results[0];
-        const isValid = await bcrypt.compare(password, user.password);
-        
-        if (!isValid) return res.status(401).json({ error: "Incorrect password" });
+    if (!otpEntry || otpEntry.otp !== otp) {
+        if (otpEntry) {
+            otpEntry.retries += 1;
+            if (otpEntry.retries >= 3) {
+                // Resend OTP
+                const newOtp = generateOtp();
+                otpStore[email] = { otp: newOtp, retries: 0 };
 
-        const token = jwt.sign({ id: user.id, role: user.role }, SECRET_KEY, { expiresIn: "1h" });
-        res.json({ message: "Login successful", token, role: user.role });
-    });
-});
+                const mailOptions = {
+                    from: process.env.EMAIL_USER,
+                    to: email,
+                    subject: 'Your OTP for Registration',
+                    text: `Your OTP for registration is ${newOtp}`
+                };
 
-
-// Get all students
-app.get("/students", (req, res) => {
-    const query = "SELECT id, name, email FROM users WHERE role = 'student'";
-    db.query(query, (err, results) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
+                transporter.sendMail(mailOptions, (error, info) => {
+                    if (error) {
+                        console.error("Error sending OTP email:", error);
+                        return res.status(500).json({ error: "Error sending OTP email" });
+                    }
+                    console.log('Email sent: ' + info.response);
+                    return res.status(401).json({ error: "OTP expired. New OTP sent to email." });
+                });
+            } else {
+                return res.status(401).json({ error: `Invalid OTP. You have ${3 - otpEntry.retries} attempts left.` });
+            }
         } else {
-            res.json(results);
+            return res.status(401).json({ error: "Invalid OTP." });
         }
-    });
-});
-
-// Get all mess staff
-app.get("/staff", (req, res) => {
-    const query = "SELECT id, name, email FROM users WHERE role = 'staff'";
-    db.query(query, (err, results) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json(results);
-        }
-    });
-});
-
-// Get reservations
-app.get("/reservations", (req, res) => {
-    db.query("SELECT * FROM reservations", (err, results) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json(results);
-        }
-    });
-});
-
-// Add reservation
-app.post("/reservations", (req, res) => {
-    const { name, phone, guests, time } = req.body;
-    const query = "INSERT INTO reservations (name, phone, guests, time) VALUES (?, ?, ?, ?)";
-    db.query(query, [name, phone, guests, time], (err, result) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json({ message: "Reservation added", id: result.insertId });
-        }
-    });
+    } else {
+        // OTP is valid, save user data and clear OTP entry
+        delete otpStore[email];
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const query = "INSERT INTO users (name, email, phone, password, username, semester, hostel, room, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'student')";
+        db.query(query, [name, email, phone, hashedPassword, username, semester, hostel, room], (err, result) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({ message: "OTP verified, registration complete" });
+        });
+    }
 });
 
 app.listen(5000, () => {
     console.log("Server is running on port 5000");
 });
-
