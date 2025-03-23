@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock, FaEnvelope } from "react-icons/fa";
 import axios from "axios"; // Import axios for API calls
@@ -10,27 +10,56 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
+  
+  //This code will prevent the page to 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(""); // Clear previous errors
+
     try {
         const response = await fetch("http://localhost:5000/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, role })
         });
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error);
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (err) {
+            throw new Error("Invalid server response");
+        }
+
+        if (!response.ok) throw new Error(data.error || "Login failed");
 
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.role);
-        navigate("/dashboard");
+
+        // 🔹 Redirect based on role
+        switch (data.role) {
+            case "admin":
+                navigate("/admin", { replace: true });
+                break;
+            case "mess_staff":
+                navigate("/mess-staff", { replace: true });
+                break;
+            case "security":
+                navigate("/security", { replace: true });
+                break;
+            case "student":
+                navigate("/student", { replace: true });
+                break;
+            default:
+                navigate("/", { replace: true }); // Redirect to home if unknown role
+        }
+
+        window.location.reload(); // Ensure navbar updates instantly
     } catch (error) {
-        alert(error.message);
+        console.error("Login error:", error.message);
+        setError(error.message);
     }
 };
-
 
   return (
     <div className="login-page">
@@ -46,7 +75,7 @@ function LoginForm() {
             <select value={role} onChange={(e) => setRole(e.target.value)} required>
               <option value="">--Select Role--</option>
               <option value="Admin">Admin</option>
-              <option value="Mess Staff">Mess Staff</option>
+              <option value="mess_Staff">Mess Staff</option>
               <option value="Security">Security</option>
               <option value="Student">Student</option>
             </select>

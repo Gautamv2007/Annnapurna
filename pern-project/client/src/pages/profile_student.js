@@ -1,26 +1,82 @@
-import React, { useState } from 'react';
-import './ProfileStudent.css';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import "./ProfileStudent.css";
+
+const API_URL = "http://localhost:5000"; // Change if needed
 
 function ProfileStudent() {
-  const [activeTab, setActiveTab] = useState('rebates');
+  const [activeTab, setActiveTab] = useState("rebates");
+  const [rebates, setRebates] = useState([]);
+  const [guests, setGuests] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [reviews, setReviews] = useState([]);
 
-  const dummyData = {
-    rebates: [
-      { id: 1, date: '2025-02-15', amount: '₹500', status: 'Approved' },
-      { id: 2, date: '2025-02-10', amount: '₹800', status: 'Pending' },
-    ],
-    guests: [
-      { id: 1, name: 'Ayushman Bhaiya', date: '2025-02-12', meal: 'Dinner', status: 'Approved' },
-      { id: 2, name: 'Prakhar Bhaiya', date: '2025-02-14', meal: 'Lunch', status: 'Pending' },
-    ],
-    payments: [
-      { id: 1, date: '2025-02-18', amount: '₹1000', type: 'Wallet Recharge' },
-      { id: 2, date: '2025-02-19', amount: '₹500', type: 'Food Deduction' },
-    ],
-    reviews: [
-      { id: 1, category: 'Food', feedback: 'Great taste!', rating: '⭐️⭐️⭐️⭐️' },
-      { id: 2, category: 'Cleanliness', feedback: 'Needs improvement!', rating: '⭐️⭐️⭐️' },
-    ]
+  // Format dates to DD/MM/YYYY
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A"; // Handle null/undefined values
+    const date = new Date(dateString);
+    return `${date.getDate().toString().padStart(2, '0')}/${
+      (date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
+  // Fetch all data when component mounts
+  useEffect(() => {
+    fetchRebates();
+    fetchGuests();
+    fetchPayments();
+    fetchReviews();
+  }, []);
+
+  // Fetch Rebate History
+  const fetchRebates = async () => {
+    try {
+      const token = localStorage.getItem("token"); // User authentication
+      const response = await axios.get(`${API_URL}/api/rebate`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setRebates(response.data);
+    } catch (error) {
+      console.error("Error fetching rebates:", error);
+    }
+  };
+
+  // Fetch Guest Registrations
+  const fetchGuests = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/api/guests`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setGuests(response.data);
+    } catch (error) {
+      console.error("Error fetching guests:", error);
+    }
+  };
+
+  // Fetch Payment Transactions
+  const fetchPayments = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/api/payments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPayments(response.data);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+    }
+  };
+
+  // Fetch Reviews
+  const fetchReviews = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/api/reviews`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setReviews(response.data);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+    }
   };
 
   return (
@@ -29,62 +85,95 @@ function ProfileStudent() {
       
       {/* Tabs */}
       <div id="tabs">
-        <button className={activeTab === 'rebates' ? 'active' : ''} onClick={() => setActiveTab('rebates')}>Rebate History</button>
-        <button className={activeTab === 'guests' ? 'active' : ''} onClick={() => setActiveTab('guests')}>Guest Registration</button>
-        <button className={activeTab === 'payments' ? 'active' : ''} onClick={() => setActiveTab('payments')}>Wallet Transactions</button>
-        <button className={activeTab === 'reviews' ? 'active' : ''} onClick={() => setActiveTab('reviews')}>Review System</button>
+        <button className={activeTab === "rebates" ? "active" : ""} onClick={() => setActiveTab("rebates")}>Rebate History</button>
+        <button className={activeTab === "guests" ? "active" : ""} onClick={() => setActiveTab("guests")}>Guest Registration</button>
+        <button className={activeTab === "payments" ? "active" : ""} onClick={() => setActiveTab("payments")}>Wallet Transactions</button>
+        <button className={activeTab === "reviews" ? "active" : ""} onClick={() => setActiveTab("reviews")}>Review System</button>
       </div>
 
       {/* Dynamic Tables */}
       <div id="table-container">
-        {activeTab === 'rebates' && (
+        {activeTab === "rebates" && (
           <table id="rebate-table">
             <thead>
-              <tr><th>Date</th><th>Amount</th><th>Status</th></tr>
+              <tr><th>Start Date</th><th>End Date</th><th>Status</th></tr>
             </thead>
             <tbody>
-              {dummyData.rebates.map(row => (
-                <tr key={row.id}><td>{row.date}</td><td>{row.amount}</td><td>{row.status}</td></tr>
-              ))}
+              {rebates.length > 0 ? (
+                rebates.map(row => (
+                  <tr key={row.id}>
+                    <td>{formatDate(row.start_date)}</td>
+                    <td>{formatDate(row.end_date)}</td>
+                    <td>{row.status || "Pending"}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="3">No rebates found</td></tr>
+              )}
             </tbody>
           </table>
         )}
 
-        {activeTab === 'guests' && (
+        {activeTab === "guests" && (
           <table id="guest-table">
             <thead>
               <tr><th>Name</th><th>Date</th><th>Meal</th><th>Status</th></tr>
             </thead>
             <tbody>
-              {dummyData.guests.map(row => (
-                <tr key={row.id}><td>{row.name}</td><td>{row.date}</td><td>{row.meal}</td><td>{row.status}</td></tr>
-              ))}
+              {guests.length > 0 ? (
+                guests.map(row => (
+                  <tr key={row.id}>
+                    <td>{row.guest_name}</td>
+                    <td>{formatDate(row.registration_date)}</td>
+                    <td>{Array.isArray(row.meals) ? row.meals.join(", ") : row.meals}</td>
+                    <td>{row.status || "Pending"}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="4">No guest registrations found</td></tr>
+              )}
             </tbody>
           </table>
         )}
 
-        {activeTab === 'payments' && (
+        {activeTab === "payments" && (
           <table id="payment-table">
             <thead>
               <tr><th>Date</th><th>Amount</th><th>Type</th></tr>
             </thead>
             <tbody>
-              {dummyData.payments.map(row => (
-                <tr key={row.id}><td>{row.date}</td><td>{row.amount}</td><td>{row.type}</td></tr>
-              ))}
+              {payments.length > 0 ? (
+                payments.map(row => (
+                  <tr key={row.id}>
+                    <td>{formatDate(row.date)}</td>
+                    <td>₹{row.amount}</td>
+                    <td>{row.type}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="3">No transactions found</td></tr>
+              )}
             </tbody>
           </table>
         )}
 
-        {activeTab === 'reviews' && (
+        {activeTab === "reviews" && (
           <table id="review-table">
             <thead>
               <tr><th>Category</th><th>Feedback</th><th>Rating</th></tr>
             </thead>
             <tbody>
-              {dummyData.reviews.map(row => (
-                <tr key={row.id}><td>{row.category}</td><td>{row.feedback}</td><td>{row.rating}</td></tr>
-              ))}
+              {reviews.length > 0 ? (
+                reviews.map(row => (
+                  <tr key={row.id}>
+                    <td>{row.category}</td>
+                    <td>{row.review}</td>
+                    <td>{"★".repeat(row.rating)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan="3">No reviews found</td></tr>
+              )}
             </tbody>
           </table>
         )}

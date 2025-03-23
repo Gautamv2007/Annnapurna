@@ -1,15 +1,17 @@
 import React, { useState } from "react";
 import jsPDF from "jspdf";
+import axios from "axios";
 import "./GuestRegistration.css";
 
 function GuestRegistration() {
   const [guests, setGuests] = useState([{ name: "", meals: [] }]);
   const [otp, setOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [isOtpVerified, setIsOtpVerified] = useState(false);
   const [showOtpField, setShowOtpField] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
 
   const pricePerMeal = 50;
+  const API_URL = "http://localhost:5000"; // Adjust according to your backend URL
 
   const addGuest = () => {
     setGuests([...guests, { name: "", meals: [] }]);
@@ -41,19 +43,59 @@ function GuestRegistration() {
     return guests.reduce((total, guest) => total + guest.meals.length * pricePerMeal, 0);
   };
 
-  const generateOTP = () => {
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(otpCode);
-    alert(`Your OTP is: ${otpCode}`); // Replace with actual OTP sending method
-    setShowOtpField(true);
+  // Request OTP from server
+  const generateOTP = async () => {
+    if (!userEmail || !userEmail.includes("@")) {
+      alert("Please enter a valid email.");
+      return;
+    }
+  
+    try {
+      const response = await axios.post(`${API_URL}/send-otp`, { email: userEmail });
+      alert(response.data.message); // Show OTP sent message
+      setShowOtpField(true);
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      alert(error.response?.data?.error || "Failed to send OTP. Please try again.");
+    }
   };
+  
 
-  const verifyOTP = () => {
-    if (otp === generatedOtp) {
-      setIsOtpVerified(true);
-      alert("OTP Verified! Proceeding with payment.");
-    } else {
-      alert("Invalid OTP. Please try again.");
+  // Verify OTP from server
+  const verifyOTP = async () => {
+    try {
+      const response = await axios.post(`${API_URL}/verify-otp`, { email: userEmail, otp });
+      if (response.data.message) {
+        setIsOtpVerified(true);
+        alert("OTP Verified! Proceeding with payment.");
+      }
+    } catch (error) {
+      alert(error.response?.data?.error || "Invalid OTP. Please try again.");
+    }
+  };
+  
+
+  // Submit guest data to the server
+  const submitGuestData = async () => {
+    if (!isOtpVerified) {
+      alert("Please verify your OTP first.");
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_URL}/api/guest-registration`, {
+        guests,
+        totalBill: calculateTotalBill(),
+        email: userEmail,
+      });
+
+      if (response.data.message) {
+        alert("Guest registration successful!");
+        generatePDF();
+      }
+    } catch (error) {
+      console.error("Error submitting guest data:", error);
+      alert("Failed to register guests. Please try again.");
     }
   };
 
@@ -80,6 +122,13 @@ function GuestRegistration() {
     <div id="guest-container">
       <h2 id="guest-title">👥 Guest Registration</h2>
       <div id="guest-form">
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={userEmail}
+          onChange={(e) => setUserEmail(e.target.value)}
+        />
+        
         {guests.map((guest, index) => (
           <div className="guest-entry" key={index}>
             <input
@@ -124,7 +173,7 @@ function GuestRegistration() {
           </>
         )}
 
-        <button id="payment-btn" onClick={generatePDF} disabled={!isOtpVerified}>
+        <button id="payment-btn" onClick={submitGuestData} disabled={!isOtpVerified}>
           💳 Proceed to Payment & Download Receipt
         </button>
       </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './ReviewSystem.css';
+import axios from 'axios';
 
 function ReviewSystem() {
   const [review, setReview] = useState('');
@@ -16,26 +17,38 @@ function ReviewSystem() {
     setRating(selectedRating);
   };
 
-  const validateAndSubmit = () => {
+  const validateAndSubmit = async () => {
     let newErrors = {};
-
-    if (category === 'Staff' && !staffName.trim()) newErrors.staffName = 'Staff name is required';
-    if (category === 'Food') {
-      if (!foodName.trim()) newErrors.foodName = 'Food name is required';
-      if (!mealDay.trim() || !/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i.test(mealDay))
-        newErrors.mealDay = 'Enter a valid day (Monday-Sunday)';
-      if (!mealTime) newErrors.mealTime = 'Meal time is required';
-    }
-    if (category === 'Cleanliness' && !place.trim()) newErrors.place = 'Place name is required';
-
+  
+    let name = category === 'Staff' ? staffName : category === 'Food' ? foodName : place;
+  
+    if (!name.trim()) newErrors.name = `${category} name is required`;
     if (!review.trim()) newErrors.review = 'Review cannot be empty';
     if (rating === 0) newErrors.rating = 'Please select a rating';
-
+  
     setErrors(newErrors);
-
+  
     if (Object.keys(newErrors).length === 0) {
-      alert('Review submitted successfully! ✅');
-      // Here, you can send the data to the backend
+      try {
+        const response = await axios.post('http://localhost:5000/api/reviews', {
+          category,
+          name,
+          rating,
+          review
+        });
+  
+        alert(response.data.message);
+        setReview('');
+        setRating(0);
+        setStaffName('');
+        setFoodName('');
+        setMealDay('');
+        setMealTime('');
+        setPlace('');
+      } catch (error) {
+        console.error('Error submitting review:', error);
+        alert('Failed to submit review. Please try again.');
+      }
     }
   };
 
