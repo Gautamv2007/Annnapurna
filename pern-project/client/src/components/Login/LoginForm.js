@@ -36,16 +36,30 @@ function LoginForm() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.role);
 
-        navigate("/student", { replace: true }); // Prevent back button going to login
+        // 🔹 Redirect based on role
+        switch (data.role) {
+            case "admin":
+                navigate("/admin", { replace: true });
+                break;
+            case "mess_staff":
+                navigate("/mess-staff", { replace: true });
+                break;
+            case "security":
+                navigate("/security", { replace: true });
+                break;
+            case "student":
+                navigate("/student", { replace: true });
+                break;
+            default:
+                navigate("/", { replace: true }); // Redirect to home if unknown role
+        }
+
         window.location.reload(); // Ensure navbar updates instantly
     } catch (error) {
         console.error("Login error:", error.message);
         setError(error.message);
     }
 };
-
-
-
 
   return (
     <div className="login-page">
@@ -61,7 +75,7 @@ function LoginForm() {
             <select value={role} onChange={(e) => setRole(e.target.value)} required>
               <option value="">--Select Role--</option>
               <option value="Admin">Admin</option>
-              <option value="Mess Staff">Mess Staff</option>
+              <option value="mess_Staff">Mess Staff</option>
               <option value="Security">Security</option>
               <option value="Student">Student</option>
             </select>

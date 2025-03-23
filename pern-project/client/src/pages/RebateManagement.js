@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import './RebateManagement.css';
 
 function RebateManagement() {
@@ -10,9 +11,26 @@ function RebateManagement() {
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [reason, setReason] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [previousEndDate, setPreviousEndDate] = useState(null);
+
+  // Load previous end_date from localStorage
+  useEffect(() => {
+    const savedEndDate = localStorage.getItem('rebateEndDate');
+    if (savedEndDate) {
+      setPreviousEndDate(savedEndDate);
+      const currentDate = new Date();
+      if (new Date(savedEndDate) > currentDate) {
+        setSubmitted(true);
+      } else {
+        localStorage.removeItem('rebateEndDate'); // Clear old data
+      }
+    }
+  }, []);
 
   const handleStartDateChange = (e) => {
     const selectedDate = new Date(e.target.value);
@@ -37,63 +55,102 @@ function RebateManagement() {
   };
 
   const handleOtpRequest = () => {
-    if (!startDate || !endDate) {
-      alert('Please select start and end dates first.');
+    if (!startDate || !endDate || !reason) {
+      alert('Please fill all fields before requesting OTP.');
       return;
     }
     setShowOtp(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!otp) {
       alert('Please enter the OTP.');
       return;
     }
-    setSubmitted(true);
-    alert('Rebate request submitted successfully! PDF generated.');
+
+    const token = localStorage.getItem('token'); // Get JWT token
+
+    if (!token) {
+      alert('You must be logged in to submit a rebate request.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await axios.post(
+        'http://localhost:5000/api/rebate',
+        { start_date: startDate, end_date: endDate, reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert('Rebate request submitted successfully!');
+      setSubmitted(true);
+      localStorage.setItem('rebateEndDate', endDate); // Save end date to restrict further submissions
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to submit rebate request.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div id="rebate-container">
       <h2 id="rebate-title">🎓 Rebate Management</h2>
 
-      <div id="rebate-form">
-        <label htmlFor="start-date">Start Date:</label>
-        <input
-          id="start-date"
-          type="date"
-          min={today.toISOString().split('T')[0]}
-          max={maxStartDate.toISOString().split('T')[0]}
-          value={startDate}
-          onChange={handleStartDateChange}
-        />
+      {submitted ? (
+        <p id="success-message">✅ You have already submitted a rebate request. Next request allowed after {previousEndDate}.</p>
+      ) : (
+        <>
+          <div id="rebate-form">
+            <label htmlFor="start-date">Start Date:</label>
+            <input
+              id="start-date"
+              type="date"
+              min={today.toISOString().split('T')[0]}
+              max={maxStartDate.toISOString().split('T')[0]}
+              value={startDate}
+              onChange={handleStartDateChange}
+              disabled={submitted}
+            />
 
-        <label htmlFor="end-date">End Date:</label>
-        <input
-          id="end-date"
-          type="date"
-          min={startDate}
-          value={endDate}
-          onChange={handleEndDateChange}
-          disabled={!startDate}
-        />
-      </div>
+            <label htmlFor="end-date">End Date:</label>
+            <input
+              id="end-date"
+              type="date"
+              min={startDate}
+              value={endDate}
+              onChange={handleEndDateChange}
+              disabled={!startDate || submitted}
+            />
 
-      {!showOtp && (
-        <button id="request-otp-btn" onClick={handleOtpRequest} disabled={!startDate || !endDate}>
-          Request OTP
-        </button>
+            <label htmlFor="reason">Reason for Leave:</label>
+            <textarea
+              id="reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Enter reason for leave..."
+              disabled={submitted}
+            ></textarea>
+          </div>
+
+          {!showOtp && (
+            <button id="request-otp-btn" onClick={handleOtpRequest} disabled={!startDate || !endDate || !reason || submitted}>
+              Request OTP
+            </button>
+          )}
+
+          {showOtp && (
+            <div id="otp-section">
+              <label htmlFor="otp-input">Enter OTP:</label>
+              <input id="otp-input" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} disabled={submitted} />
+              <button id="submit-rebate-btn" onClick={handleSubmit} disabled={loading || submitted}>
+                {loading ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          )}
+        </>
       )}
-
-      {showOtp && (
-        <div id="otp-section">
-          <label htmlFor="otp-input">Enter OTP:</label>
-          <input id="otp-input" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} />
-          <button id="submit-rebate-btn" onClick={handleSubmit}>Submit</button>
-        </div>
-      )}
-
-      {submitted && <p id="success-message">PDF Generated Successfully ✅</p>}
 
       <button id="back-btn" onClick={() => navigate('/student')}>Back</button>
     </div>
@@ -101,3 +158,4 @@ function RebateManagement() {
 }
 
 export default RebateManagement;
+

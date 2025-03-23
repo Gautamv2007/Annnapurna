@@ -1,39 +1,43 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { FaUsers, FaFilter } from "react-icons/fa";
 import "./AttendanceEarnings.css";
 
-const dummyData = [
-  { date: "2025-02-20", students: 120, costPerDay: 50 },
-  { date: "2025-02-21", students: 110, costPerDay: 50 },
-  { date: "2025-02-22", students: 130, costPerDay: 50 },
-  { date: "2025-02-23", students: 115, costPerDay: 50 },
-];
+const API_URL = "http://localhost:5000";
 
 function AttendanceEarnings() {
+  const [attendanceData, setAttendanceData] = useState([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Filter data based on selected date range
-  const filteredData = dummyData.filter((entry) => {
+  useEffect(() => {
+    fetchAttendance();
+  }, []);
+
+  const fetchAttendance = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/attendance`);
+      setAttendanceData([response.data]); // Store as an array
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+    }
+  };
+
+  // Filter data based on date range
+  const filteredData = attendanceData.filter((entry) => {
     return (!startDate || entry.date >= startDate) && (!endDate || entry.date <= endDate);
   });
-
-  // Calculate totals automatically based on filtered rows
-  const totalAttendance = filteredData.reduce((sum, entry) => sum + entry.students, 0);
-  const totalEarnings = filteredData.reduce((sum, entry) => sum + entry.students * entry.costPerDay, 0);
 
   return (
     <div className="attendance-container">
       <h2><FaUsers /> Attendance & Earnings</h2>
 
-      {/* Filters */}
       <div className="filter-section">
         <FaFilter /> <strong>Filter by Date:</strong>
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
       </div>
 
-      {/* Table */}
       <table>
         <thead>
           <tr>
@@ -44,24 +48,25 @@ function AttendanceEarnings() {
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((entry, index) => (
-            <tr key={index}>
-              <td>{entry.date}</td>
-              <td>{entry.students}</td>
-              <td>₹{entry.costPerDay}</td>
-              <td>₹{entry.students * entry.costPerDay}</td>
+          {filteredData.length > 0 ? (
+            filteredData.map((entry, index) => (
+              <tr key={index}>
+                <td>{entry.date}</td>
+                <td>{entry.students_attended}</td>
+                <td>₹{entry.cost_per_day}</td>
+                <td>₹{entry.total_earnings}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="4">No data available</td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
-
-      {/* Total Section */}
-      <div className="total-section">
-        <strong>Total Attendance:</strong> {totalAttendance} Students | 
-        <strong> Total Earnings:</strong> ₹{totalEarnings}
-      </div>
     </div>
   );
 }
 
 export default AttendanceEarnings;
+

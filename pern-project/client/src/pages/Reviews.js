@@ -1,45 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { FaStar } from "react-icons/fa";
 import "./Reviews.css";
 
-const dummyReviews = [
-  { id: 1, date: "2025-02-20", category: "Food Quality", detail: "Lunch - Tasty but less quantity.", comment: "" },
-  { id: 2, date: "2025-02-21", category: "Cleanliness", detail: "Dining Hall - Needs improvement.", comment: "" },
-  { id: 3, date: "2025-02-22", category: "Staff Behavior", detail: "Ramesh - Needs to be polite.", comment: "" },
-  { id: 4, date: "2025-02-21", category: "Food Quality", detail: "Dinner - Overcooked rice.", comment: "" },
-  { id: 5, date: "2025-02-22", category: "Cleanliness", detail: "Kitchen - Not cleaned properly.", comment: "" },
-];
+const API_URL = "http://localhost:5000"; // Adjust if needed
 
 function Reviews() {
-  const [reviews, setReviews] = useState(dummyReviews);
+  const [reviews, setReviews] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("");
-  const [comments, setComments] = useState({});
 
-  // Filter reviews based on selected category and date
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  const fetchReviews = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/reviews`);
+      
+      // Convert created_at to a readable format
+      const formattedReviews = response.data.map((review) => ({
+        ...review,
+        formatted_date: new Date(review.created_at).toLocaleDateString("en-GB") // Format: DD/MM/YYYY
+      }));
+
+      console.log("Fetched Reviews:", formattedReviews);
+      setReviews(formattedReviews);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+    }
+  };
+
   const filteredReviews = reviews.filter((review) => {
     return (
       (categoryFilter === "All" || review.category === categoryFilter) &&
-      (dateFilter === "" || review.date === dateFilter)
+      (dateFilter === "" || review.formatted_date === dateFilter)
     );
   });
-
-  // Handle comment change
-  const handleCommentChange = (id, value) => {
-    setComments((prev) => ({ ...prev, [id]: value }));
-  };
-
-  // Handle "Resolve" button click
-  const handleResolve = (id) => {
-    alert(`Review ID ${id} resolved with comment: ${comments[id] || "No comment"}`);
-    setReviews(reviews.filter((review) => review.id !== id)); // Remove resolved review
-  };
 
   return (
     <div className="reviews-container">
       <h2><FaStar /> Mess Reviews</h2>
 
-      {/* Filter Section */}
       <div className="filter-section">
         <label>Filter by Category:</label>
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
@@ -53,40 +55,26 @@ function Reviews() {
         <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
       </div>
 
-      {/* Reviews Table */}
       <table className="reviews-table">
         <thead>
           <tr>
             <th>Date</th>
             <th>Category</th>
             <th>Details</th>
-            <th>Comment</th>
-            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {filteredReviews.length > 0 ? (
             filteredReviews.map((review) => (
               <tr key={review.id}>
-                <td>{review.date}</td>
+                <td>{review.formatted_date || "No Date Available"}</td>
                 <td>{review.category}</td>
-                <td>{review.detail}</td>
-                <td>
-                  <input
-                    type="text"
-                    placeholder="Add comment"
-                    value={comments[review.id] || ""}
-                    onChange={(e) => handleCommentChange(review.id, e.target.value)}
-                  />
-                </td>
-                <td>
-                  <button onClick={() => handleResolve(review.id)}>Resolve</button>
-                </td>
+                <td>{review.name}</td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="5">No reviews found for the selected filters.</td>
+              <td colSpan="3">No reviews found for the selected filters.</td>
             </tr>
           )}
         </tbody>
@@ -96,3 +84,6 @@ function Reviews() {
 }
 
 export default Reviews;
+
+
+
