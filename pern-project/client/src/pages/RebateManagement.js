@@ -18,18 +18,30 @@ function RebateManagement() {
   const [loading, setLoading] = useState(false);
   const [previousEndDate, setPreviousEndDate] = useState(null);
 
-  // Load previous end_date from localStorage
+  // Fetch rebate status from backend
   useEffect(() => {
-    const savedEndDate = localStorage.getItem('rebateEndDate');
-    if (savedEndDate) {
-      setPreviousEndDate(savedEndDate);
-      const currentDate = new Date();
-      if (new Date(savedEndDate) > currentDate) {
-        setSubmitted(true);
-      } else {
-        localStorage.removeItem('rebateEndDate'); // Clear old data
+    const fetchRebateStatus = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const response = await axios.get('http://localhost:5000/api/rebate/status', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.data?.end_date) {
+          setPreviousEndDate(response.data.end_date);
+          setSubmitted(true);
+        } else {
+          setSubmitted(false);
+        }
+      } catch (error) {
+        console.error('Error fetching rebate status:', error);
+        setSubmitted(false);
       }
-    }
+    };
+
+    fetchRebateStatus();
   }, []);
 
   const handleStartDateChange = (e) => {
@@ -68,8 +80,7 @@ function RebateManagement() {
       return;
     }
 
-    const token = localStorage.getItem('token'); // Get JWT token
-
+    const token = localStorage.getItem('token');
     if (!token) {
       alert('You must be logged in to submit a rebate request.');
       return;
@@ -86,7 +97,6 @@ function RebateManagement() {
 
       alert('Rebate request submitted successfully!');
       setSubmitted(true);
-      localStorage.setItem('rebateEndDate', endDate); // Save end date to restrict further submissions
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to submit rebate request.');
     } finally {
@@ -158,4 +168,3 @@ function RebateManagement() {
 }
 
 export default RebateManagement;
-

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock, FaEnvelope } from "react-icons/fa";
-import axios from "axios"; // Import axios for API calls
 import "./LoginForm.css";
 
 function LoginForm() {
@@ -34,7 +33,6 @@ function LoginForm() {
         if (!response.ok) throw new Error(data.error || "Login failed");
 
         localStorage.setItem("token", data.token);
-        localStorage.setItem("role", data.role);
 
         // 🔹 Redirect based on role
         switch (data.role) {

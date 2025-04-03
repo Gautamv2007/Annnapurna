@@ -17,7 +17,7 @@ const SECRET_KEY = process.env.SECRET_KEY;
 const db = mysql.createConnection({
     host: "localhost",
     user: "root",
-    password: "1234", // Change this to your MySQL password
+    password: "root", // Change this to your MySQL password
     database: "dining_management"
 });
 
@@ -29,6 +29,8 @@ db.connect(err => {
     console.log("Connected to database");
 
     insertMessStaffUser();
+    insertSecurityUser();
+    insertTestStudents()
 });
 
 // Function to insert a mess staff user
@@ -55,6 +57,66 @@ async function insertMessStaffUser() {
         console.error("Error hashing password:", error);
     }
 }
+async function insertTestStudents() {
+    try {
+        const password = "student123"; // Default password for test students
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const sql = "INSERT INTO users (name, email, phone, password, username, semester, hostel, room, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        for (let i = 1; i <= 20; i++) {
+            const rollNumber = `524cs${String(i).padStart(3, '0')}`;
+            const email = `${rollNumber}@iiitk.ac.in`;
+            const name = `Test Student ${i}`;
+            const phone = `98765${String(10000 + i)}`;
+            const username = rollNumber;
+            const semester = Math.ceil(i / 5); // Assigning semesters 1-4
+            const hostel = `Hostel-${Math.ceil(i / 5)}`;
+            const room = String(100 + i);
+            const role = "student";
+
+            db.query(sql, [name, email, phone, hashedPassword, username, semester, hostel, room, role], (err, result) => {
+                if (err) {
+                    if (err.code === "ER_DUP_ENTRY") {
+                        console.log(`User ${username} already exists.`);
+                    } else {
+                        console.error("Error inserting user:", err);
+                    }
+                    return;
+                }
+                console.log(`User ${username} added successfully!`);
+            });
+        }
+    } catch (error) {
+        console.error("Error hashing password:", error);
+    }
+}
+
+async function insertSecurityUser() {
+    try {
+        const password = "security123"; // Change password if needed
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const sql = "INSERT INTO users (name, email, phone, password, username, semester, hostel, room, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const values = ["Test Security", "security@example.com", "9876543211", hashedPassword, "security1", 0, "Security", "102", "security"];
+
+        db.query(sql, values, (err, result) => {
+            if (err) {
+                if (err.code === "ER_DUP_ENTRY") {
+                    console.log("Security user already exists.");
+                } else {
+                    console.error("Error inserting user:", err);
+                }
+                return;
+            }
+            console.log("Security user added successfully!");
+        });
+    } catch (error) {
+        console.error("Error hashing password:", error);
+    }
+}
+
+
 
 // Create users table if not exists
 const createUsersTable = `
@@ -231,6 +293,20 @@ app.post("/verify-otp", async (req, res) => {
     }
 });
 
+app.post("/verify-otp-guest", async (req, res) => {
+    const { email, otp } = req.body;
+    const otpEntry = otpStore[email];
+
+    if (!otpEntry || otpEntry.otp !== otp) {
+        return res.status(401).json({ error: "Invalid OTP." });
+    } else {
+        delete otpStore[email];
+
+        res.json({ message: "OTP verified successfully for guest registration" });
+    }
+});
+
+
 // Login user
 app.post("/login", async (req, res) => {
     const { email, password, role } = req.body;
@@ -268,6 +344,27 @@ const authenticateToken = (req, res, next) => {
 
 
 // Submit Rebate Request
+app.get("/api/rebate/status", (req, res) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    const decoded = jwt.verify(token, "your_secret_key");
+    const rollNumber = decoded.roll_number;
+
+    const sql = "SELECT end_date FROM mess_rebate WHERE roll_number = ? ORDER BY id DESC LIMIT 1";
+    db.query(sql, [rollNumber], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        if (result.length > 0) {
+            res.json({ end_date: result[0].end_date });
+        } else {
+            res.json({ end_date: null });
+        }
+    });
+});
+
+
+// Create a new rebate request (with active rebate and date checks)
 app.post("/api/rebate", authenticateToken, (req, res) => {
     const { start_date, end_date, reason } = req.body;
     const userId = req.user.id; // Extract user ID from token
@@ -276,39 +373,75 @@ app.post("/api/rebate", authenticateToken, (req, res) => {
         return res.status(400).json({ error: "Start date, end date, and reason are required." });
     }
 
-    // Fetch user details from the users table
-    const userQuery = "SELECT name, username AS roll_number, semester, hostel AS hall_name, room AS room_no, phone AS mobile_number FROM users WHERE id = ?";
-    db.query(userQuery, [userId], (err, results) => {
-        if (err || results.length === 0) {
-            return res.status(500).json({ error: "Failed to retrieve user details." });
+    // Ensure user is not entering past dates
+    const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD
+    if (start_date < today || end_date < today) {
+        return res.status(400).json({ error: "Start date and end date must be in the future." });
+    }
+
+    // ✅ Check if the user exists and fetch details
+    const userQuery = "SELECT name, username AS roll_number, semester, branch, hostel AS hall_name, room AS room_no, phone AS mobile_number FROM users WHERE id = ?";
+    
+    db.query(userQuery, [userId], (userErr, results) => {
+        if (userErr) {
+            console.error("Database error:", userErr);
+            return res.status(500).json({ error: "Database error while retrieving user details." });
         }
 
-        const { name, roll_number, semester, hall_name, room_no, mobile_number } = results[0];
+        if (results.length === 0) {
+            console.error("User not found for ID:", userId);
+            return res.status(404).json({ error: "User not found. Please ensure you're logged in correctly." });
+        }
 
-        // Insert rebate request
-        const insertQuery = `
-            INSERT INTO mess_rebate (start_date, end_date, name, roll_number, semester, branch, hall_name, room_no, mobile_number, reason, period_of_absence)
-            VALUES (?, ?, ?, ?, ?, '', ?, ?, ?, ?, '')
+        const { name, roll_number, semester, branch, hall_name, room_no, mobile_number } = results[0];
+
+        // ✅ Check if user already has an active rebate
+        const checkRebateQuery = `
+            SELECT * FROM mess_rebate 
+            WHERE roll_number = ? 
+            ORDER BY end_date DESC 
+            LIMIT 1
         `;
 
-        db.query(insertQuery, [start_date, end_date, name, roll_number, semester, hall_name, room_no, mobile_number, reason], (insertErr, result) => {
-            if (insertErr) return res.status(500).json({ error: "Failed to submit rebate request." });
+        db.query(checkRebateQuery, [roll_number], (err, existingRebates) => {
+            if (err) {
+                console.error("Error checking rebate history:", err);
+                return res.status(500).json({ error: "Error checking rebate history." });
+            }
 
-            res.status(201).json({ message: "Rebate request submitted successfully", rebateId: result.insertId });
+            if (existingRebates.length > 0) {
+                const lastRebate = existingRebates[0];
+
+                // If last rebate is still active, deny new request
+                if (lastRebate.end_date >= today) {
+                    return res.status(400).json({ error: "You already have an active rebate request. Please wait until it expires before submitting a new one." });
+                }
+
+                // Ensure new rebate starts AFTER the last rebate's end date
+                if (start_date <= lastRebate.end_date) {
+                    return res.status(400).json({ error: `Your new rebate must start after ${lastRebate.end_date}. Please enter a valid start date.` });
+                }
+            }
+
+            // ✅ Insert new rebate request
+            const insertQuery = `
+                INSERT INTO mess_rebate (start_date, end_date, name, roll_number, semester, branch, hall_name, room_no, mobile_number, reason, period_of_absence)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, DATEDIFF(?, ?))
+            `;
+
+            db.query(insertQuery, [start_date, end_date, name, roll_number, semester, branch, hall_name, room_no, mobile_number, reason, end_date, start_date], (insertErr, result) => {
+                if (insertErr) {
+                    console.error("Error inserting rebate:", insertErr);
+                    return res.status(500).json({ error: "Failed to submit rebate request." });
+                }
+
+                res.status(201).json({ message: "Rebate request submitted successfully", rebateId: result.insertId });
+            });
         });
     });
 });
 
-// Fetch Rebate Requests
-app.get("/api/rebate", (req, res) => {
-    const query = "SELECT * FROM mess_rebate ORDER BY start_date DESC";
 
-    db.query(query, (err, results) => {
-        if (err) return res.status(500).json({ error: "Failed to retrieve rebate requests" });
-
-        res.json(results);
-    });
-});
 
 // Fetch Mess Menu
 app.get("/api/messmenu", (req, res) => {
@@ -390,27 +523,32 @@ app.get("/api/messmenu", (req, res) => {
 
 //API to Submit Reviews 
 app.post("/api/reviews", (req, res) => {
-    const { category, name, rating, review } = req.body;
-
-    // Log request body to check if data is received
-    console.log("Received Review Data:", req.body);
-
-    if (!category || !name || !rating || !review) {
-        return res.status(400).json({ error: "All fields (category, name, rating, review) are required." });
-    }
-
-    const query = `INSERT INTO reviews (category, name, rating, review) VALUES (?, ?, ?, ?)`;
-
-    db.query(query, [category, name, rating, review], (err, result) => {
+    const { category, staff_name, food_name, meal_day, meal_time, place, review, rating } = req.body;
+  
+    let sql = `INSERT INTO reviews (category, staff_name, food_name, meal_day, meal_time, place, review, rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  
+    db.query(
+      sql,
+      [
+        category,
+        staff_name || null,
+        food_name || null,
+        meal_day || null,
+        meal_time || null,
+        place || null,
+        review,
+        rating,
+      ],
+      (err, result) => {
         if (err) {
-            console.error("Error inserting review into MySQL:", err);
-            return res.status(500).json({ error: "Failed to submit review." });
+          console.error("Error inserting review:", err);
+          return res.status(500).json({ error: "Database error" });
         }
-
-        console.log("Review inserted successfully, ID:", result.insertId);
-        res.status(201).json({ message: "Review submitted successfully!", reviewId: result.insertId });
-    });
-});
+        res.json({ message: "Review added successfully!" });
+      }
+    );
+  });
+  
 
 
 //API to Fetch all reviews
@@ -539,6 +677,83 @@ app.get("/api/attendance", (req, res) => {
         console.log(`Rebate Students: ${rebate_students}, Students Attended: ${students_attended}`);
 
         res.json({ date: new Date().toISOString().split("T")[0], students_attended, cost_per_day, total_earnings });
+    });
+});
+// Fetch pending rebate requests
+app.get("/api/rebates/pending", (req, res) => {
+    const sql = "SELECT * FROM mess_rebate WHERE status = 'pending'";
+    db.query(sql, (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(result);
+    });
+});
+
+// Fetch history of rebate requests (approved/rejected)
+app.get("/api/rebates/history", (req, res) => {
+    const sql = "SELECT * FROM mess_rebate WHERE status != 'pending'";
+    db.query(sql, (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(result);
+    });
+});
+
+// Fetch user details based on email (security personnel's view)
+app.get("/api/user/:email", (req, res) => {
+    const email = req.params.email;
+    const sql = "SELECT * FROM users WHERE email = ?";
+    db.query(sql, [email], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(result[0]); 
+    });
+});
+
+// Approve or reject rebate request
+app.post("/api/rebates/update", (req, res) => {
+    const { id, status } = req.body;
+
+    if (status !== "approved" && status !== "rejected") {
+        return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const updateStatusSql = "UPDATE mess_rebate SET status = ? WHERE id = ?";
+    db.query(updateStatusSql, [status, id], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (status === "approved") {
+            // Fetch roll_number and number_of_days from mess_rebate
+            const getDetailsSql = "SELECT roll_number, number_of_days FROM mess_rebate WHERE id = ?";
+            db.query(getDetailsSql, [id], (err, rebateResult) => {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+
+                if (rebateResult.length === 0) {
+                    return res.status(404).json({ error: "Rebate record not found" });
+                }
+
+                const { roll_number, number_of_days } = rebateResult[0];
+                const daysToDeduct = number_of_days || 0;
+
+                // Update attendance based on roll_number
+                const updateAttendanceSql = "UPDATE users SET attendance = attendance - ? WHERE username = ?";
+                db.query(updateAttendanceSql, [daysToDeduct, roll_number], (err, updateResult) => {
+                    if (err) {
+                        return res.status(500).json({ error: err.message });
+                    }
+                    res.json({ message: "Rebate updated and attendance deducted successfully." });
+                });
+            });
+        } else {
+            res.json({ message: "Rebate request updated successfully." });
+        }
     });
 });
 

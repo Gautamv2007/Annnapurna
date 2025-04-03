@@ -64,7 +64,7 @@ function GuestRegistration() {
   // Verify OTP from server
   const verifyOTP = async () => {
     try {
-      const response = await axios.post(`${API_URL}/verify-otp`, { email: userEmail, otp });
+      const response = await axios.post(`${API_URL}/verify-otp-guest`, { email: userEmail, otp });
       if (response.data.message) {
         setIsOtpVerified(true);
         alert("OTP Verified! Proceeding with payment.");
@@ -83,7 +83,7 @@ function GuestRegistration() {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/api/guest-registration`, {
+      const response = await axios.post(`${API_URL}/api/register-guest`, {
         guests,
         totalBill: calculateTotalBill(),
         email: userEmail,
