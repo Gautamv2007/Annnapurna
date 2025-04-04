@@ -3,7 +3,7 @@ import './Notifications.css';
 
 const Notifications = () => {
   const [notifications] = useState([
-    { id: 1, message: 'Special dish available this Sunday!' },
+    { id: 1, message: 'Special di available this Sunday!' },
     { id: 2, message: 'Mess timings changed for the festival week.' },
     { id: 3, message: 'Feedback session scheduled for next month.' }
   ]);
