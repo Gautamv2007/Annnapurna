@@ -16,7 +16,7 @@ function SecurityPage() {
 
     const fetchPendingRebates = async () => {
         try {
-            const res = await axios.get("http://localhost:5000/api/rebates/pending");
+            const res = await axios.get("https://mybackend.loca.lt/api/rebates/pending");
             setPendingRebates(res.data);
             setShowPendingRebates(true);
             setShowHistoryRebates(false);
@@ -27,7 +27,7 @@ function SecurityPage() {
 
     const fetchHistoryRebates = async () => {
         try {
-            const res = await axios.get("http://localhost:5000/api/rebates/history");
+            const res = await axios.get("https://mybackend.loca.lt/api/rebates/history");
             setHistoryRebates(res.data);
             setShowHistoryRebates(true);
             setShowPendingRebates(false);
@@ -38,7 +38,7 @@ function SecurityPage() {
 
     const fetchUserData = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/api/user/${securityEmail}`);
+            const res = await axios.get(`https://mybackend.loca.lt/api/user/${securityEmail}`);
             setUserData(res.data);
         } catch (error) {
             console.error("Error fetching user data", error);
@@ -47,7 +47,7 @@ function SecurityPage() {
 
     const updateRebateStatus = async (id, status, email) => {
         try {
-            await axios.post("http://localhost:5000/api/rebates/update", { id, status, email });
+            await axios.post("https://mybackend.loca.lt/api/rebates/update", { id, status, email });
             alert(`Rebate request ${status}!`);
             fetchPendingRebates();
             fetchHistoryRebates();

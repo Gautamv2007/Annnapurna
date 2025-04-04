@@ -27,7 +27,7 @@ const LiveMenu = () => {
   // Fetch Menu from API
   const fetchMenu = useCallback(async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/messmenu");
+      const response = await axios.get("https://mybackend.loca.lt/api/messmenu");
       setMenuData(response.data);
     } catch (error) {
       console.error("Error fetching menu:", error);

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import "./ReviewSystem.css";
 
-const API_URL = "http://localhost:5000/api/reviews";
+const API_URL = "https://mybackend.loca.lt/api/reviews";
 
 function ReviewSystem() {
   const [review, setReview] = useState("");

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./ProfileStudent.css";
 
-const API_URL = "http://localhost:5000"; // Change if needed
+const API_URL = "https://mybackend.loca.lt"; // Change if needed
 
 function ProfileStudent() {
   const [activeTab, setActiveTab] = useState("rebates");

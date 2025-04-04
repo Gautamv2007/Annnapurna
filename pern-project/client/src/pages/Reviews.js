@@ -3,7 +3,7 @@ import axios from "axios";
 import { FaStar } from "react-icons/fa";
 import "./Reviews.css";
 
-const API_URL = "http://localhost:5000"; // Adjust if needed
+const API_URL = "https://mybackend.loca.lt"; // Adjust if needed
 
 function Reviews() {
   const [reviews, setReviews] = useState([]);

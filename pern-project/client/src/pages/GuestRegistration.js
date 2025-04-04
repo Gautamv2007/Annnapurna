@@ -11,7 +11,7 @@ function GuestRegistration() {
   const [userEmail, setUserEmail] = useState("");
 
   const pricePerMeal = 50;
-  const API_URL = "http://localhost:5000"; // Adjust according to your backend URL
+  const API_URL = "https://mybackend.loca.lt"; // Adjust according to your backend URL
 
   const addGuest = () => {
     setGuests([...guests, { name: "", meals: [] }]);

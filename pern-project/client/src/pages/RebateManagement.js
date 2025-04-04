@@ -25,7 +25,7 @@ function RebateManagement() {
       if (!token) return;
 
       try {
-        const response = await axios.get('http://localhost:5000/api/rebate/status', {
+        const response = await axios.get('https://mybackend.loca.lt/api/rebate/status', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -90,7 +90,7 @@ function RebateManagement() {
 
     try {
       await axios.post(
-        'http://localhost:5000/api/rebate',
+        'https://mybackend.loca.lt/api/rebate',
         { start_date: startDate, end_date: endDate, reason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
