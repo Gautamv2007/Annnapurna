@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import bcrypt from "bcryptjs";
 import "./Navbar.css";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
-  const [role, setRole] = useState(localStorage.getItem("role") || "");
+  const [hashedRole, setHashedRole] = useState(localStorage.getItem("role") || "");
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleStorageChange = () => {
       setIsLoggedIn(!!localStorage.getItem("token"));
-      setRole(localStorage.getItem("role") || "");
+      setHashedRole(localStorage.getItem("role") || "");
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
@@ -38,19 +39,26 @@ const Navbar = () => {
     }
   };
 
-  const getDashboardPath = () => {
-    switch (role) {
-      case "student":
-        return "/student";
-      case "admin":
-        return "/admin";
-      case "mess_staff":
-        return "/mess-staff";
-      case "security":
-        return "/security";
-      default:
-        return "/";
+  const getDashboardPath = async () => {
+    const roles = {
+      student: "/student",
+      admin: "/admin",
+      mess_staff: "/mess-staff",
+      security: "/security",
+    };
+
+    for (const [role, path] of Object.entries(roles)) {
+      const isMatch = await bcrypt.compare(role, hashedRole);
+      if (isMatch) {
+        return path;
+      }
     }
+    return "/";
+  };
+
+  const handleDashboardNavigation = async () => {
+    const path = await getDashboardPath();
+    navigate(path);
   };
 
   return (
@@ -75,7 +83,7 @@ const Navbar = () => {
       <div className="navbar-buttons">
         {isLoggedIn ? (
           <>
-            <button onClick={() => navigate(getDashboardPath())} className="btn">Dashboard</button>
+            <button onClick={handleDashboardNavigation} className="btn">Dashboard</button>
             <button onClick={handleLogout} className="btn logout">Logout</button>
           </>
         ) : (
@@ -106,7 +114,7 @@ const Navbar = () => {
         <div className="mobile-buttons">
           {isLoggedIn ? (
             <>
-              <button onClick={() => navigate(getDashboardPath())} className="btn">Dashboard</button>
+              <button onClick={handleDashboardNavigation} className="btn">Dashboard</button>
               <button onClick={handleLogout} className="btn logout">Logout</button>
             </>
           ) : (

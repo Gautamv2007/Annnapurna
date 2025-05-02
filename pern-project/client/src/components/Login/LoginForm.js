@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle, FaLock, FaEnvelope } from "react-icons/fa";
+import bcrypt from "bcryptjs"
 import "./LoginForm.css";
 
 function LoginForm() {
@@ -10,13 +11,15 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   
+  
+  
   //This code will prevent the page to 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(""); // Clear previous errors
 
     try {
-        const response = await fetch("https://mybackend.loca.lt/login", {
+        const response = await fetch("http://localhost:5000/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password, role })
@@ -33,6 +36,7 @@ function LoginForm() {
         if (!response.ok) throw new Error(data.error || "Login failed");
 
         localStorage.setItem("token", data.token);
+        localStorage.setItem("role", await bcrypt.hash(data.role, 10));
 
         // 🔹 Redirect based on role
         switch (data.role) {

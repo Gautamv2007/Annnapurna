@@ -6,6 +6,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 require('dotenv').config();
+const { PDFDocument, StandardFonts } = require('pdf-lib');
+const fs = require('fs');
+const path = require('path');
+const puppeteer = require('puppeteer');
 
 const app = express();
 app.use(cors());
@@ -235,8 +239,8 @@ db.query(createAttendanceEarningsTable, (err, result) => {
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: "shikharanu1@gmail.com",
+        pass:"tydiypgjlnriuscc"
     }
 });
 
@@ -365,82 +369,157 @@ app.get("/api/rebate/status", (req, res) => {
 
 
 // Create a new rebate request (with active rebate and date checks)
+
 app.post("/api/rebate", authenticateToken, (req, res) => {
     const { start_date, end_date, reason } = req.body;
-    const userId = req.user.id; // Extract user ID from token
+    const userId = req.user.id;
 
     if (!start_date || !end_date || !reason) {
         return res.status(400).json({ error: "Start date, end date, and reason are required." });
     }
 
-    // Ensure user is not entering past dates
-    const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD
+    const today = new Date().toISOString().split("T")[0];
     if (start_date < today || end_date < today) {
         return res.status(400).json({ error: "Start date and end date must be in the future." });
     }
 
-    // ✅ Check if the user exists and fetch details
-    const userQuery = "SELECT name, username AS roll_number, semester, branch, hostel AS hall_name, room AS room_no, phone AS mobile_number FROM users WHERE id = ?";
-    
+    const userQuery = `
+        SELECT name, email, username AS roll_number, semester, branch, hostel AS hall_name, room AS room_no, phone AS mobile_number 
+        FROM users 
+        WHERE id = ?
+    `;
+
     db.query(userQuery, [userId], (userErr, results) => {
-        if (userErr) {
-            console.error("Database error:", userErr);
-            return res.status(500).json({ error: "Database error while retrieving user details." });
+        if (userErr || results.length === 0) {
+            console.error("User fetch error:", userErr);
+            return res.status(500).json({ error: "Error retrieving user details." });
         }
 
-        if (results.length === 0) {
-            console.error("User not found for ID:", userId);
-            return res.status(404).json({ error: "User not found. Please ensure you're logged in correctly." });
-        }
+        const { name, email, roll_number, semester, branch, hall_name, room_no, mobile_number } = results[0];
 
-        const { name, roll_number, semester, branch, hall_name, room_no, mobile_number } = results[0];
-
-        // ✅ Check if user already has an active rebate
-        const checkRebateQuery = `
+        const overlapCheckQuery = `
             SELECT * FROM mess_rebate 
             WHERE roll_number = ? 
-            ORDER BY end_date DESC 
-            LIMIT 1
+            AND (
+                (start_date <= ? AND end_date >= ?)
+                OR 
+                (start_date >= ? AND start_date <= ?)
+            )
         `;
 
-        db.query(checkRebateQuery, [roll_number], (err, existingRebates) => {
-            if (err) {
-                console.error("Error checking rebate history:", err);
-                return res.status(500).json({ error: "Error checking rebate history." });
+        db.query(overlapCheckQuery, [roll_number, end_date, start_date, start_date, end_date], (overlapErr, overlappingRebates) => {
+            if (overlapErr) {
+                console.error("Overlap check error:", overlapErr);
+                return res.status(500).json({ error: "Error checking overlapping rebates." });
             }
 
-            if (existingRebates.length > 0) {
-                const lastRebate = existingRebates[0];
-
-                // If last rebate is still active, deny new request
-                if (lastRebate.end_date >= today) {
-                    return res.status(400).json({ error: "You already have an active rebate request. Please wait until it expires before submitting a new one." });
-                }
-
-                // Ensure new rebate starts AFTER the last rebate's end date
-                if (start_date <= lastRebate.end_date) {
-                    return res.status(400).json({ error: `Your new rebate must start after ${lastRebate.end_date}. Please enter a valid start date.` });
-                }
+            if (overlappingRebates.length > 0) {
+                return res.status(400).json({ error: "The selected date range conflicts with an existing rebate request." });
             }
 
-            // ✅ Insert new rebate request
             const insertQuery = `
-                INSERT INTO mess_rebate (start_date, end_date, name, roll_number, semester, branch, hall_name, room_no, mobile_number, reason, period_of_absence)
+                INSERT INTO mess_rebate 
+                (start_date, end_date, name, roll_number, semester, branch, hall_name, room_no, mobile_number, reason, period_of_absence)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, DATEDIFF(?, ?))
             `;
 
             db.query(insertQuery, [start_date, end_date, name, roll_number, semester, branch, hall_name, room_no, mobile_number, reason, end_date, start_date], (insertErr, result) => {
                 if (insertErr) {
-                    console.error("Error inserting rebate:", insertErr);
+                    console.error("Insert error:", insertErr);
                     return res.status(500).json({ error: "Failed to submit rebate request." });
                 }
 
-                res.status(201).json({ message: "Rebate request submitted successfully", rebateId: result.insertId });
+                // Return data to the frontend
+                const numberOfDays = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24)) + 1;
+
+                return res.status(200).json({
+                    name,
+                    roll_number,
+                    semester,
+                    branch,
+                    hall_name,
+                    room_no,
+                    mobile_number,
+                    reason,
+                    start_date,
+                    end_date,
+                    total_days: numberOfDays,
+                });
             });
         });
     });
 });
+app.get('/api/rebate/pdf', authenticateToken, (req, res) => {
+    const userId = req.user.user;
+    console.log("User ID from token:", userId); // Debugging log
 
+    const getUserDetailsQuery = `
+        SELECT name, email, username AS roll_number, semester, branch, hostel AS hall_name, room AS room_no, phone AS mobile_number 
+        FROM users 
+        WHERE id = ?
+    `;
+
+    db.query(getUserDetailsQuery, [userId], (userErr, userResults) => {
+        if (userErr || userResults.length === 0) {
+            return res.status(500).json({ error: "Failed to retrieve user details." });
+        }
+
+        const user = userResults[0];
+
+        const getRebateQuery = `
+            SELECT * FROM mess_rebate 
+            WHERE roll_number = ? 
+            ORDER BY id DESC 
+            LIMIT 1
+        `;
+
+        db.query(getRebateQuery, [user.roll_number], async (rebateErr, rebateResults) => {
+            if (rebateErr || rebateResults.length === 0) {
+                return res.status(404).json({ error: "No rebate record found." });
+            }
+
+            const rebate = rebateResults[0];
+
+            try {
+                const pdfDoc = await PDFDocument.create();
+                const page = pdfDoc.addPage([595, 842]);
+                const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                const { height } = page.getSize();
+
+                const drawText = (text, x, y) => {
+                    page.drawText(text, { x, y, size: 12, font });
+                };
+
+                drawText("Mess Rebate Form", 230, height - 50);
+                drawText(`Date: ${new Date().toLocaleDateString()}`, 420, height - 70);
+                drawText(`1. Name of the Student: ${user.name}`, 50, height - 100);
+                drawText(`2. Roll Number: ${user.roll_number}`, 50, height - 130);
+                drawText(`   Semester: ${user.semester}   Branch: ${user.branch}`, 50, height - 150);
+                drawText(`3. Hall Name and Room No.: ${user.hall_name}, ${user.room_no}`, 50, height - 180);
+                drawText(`   Mobile Number: ${user.mobile_number}`, 50, height - 200);
+                drawText(`4. Reason: ${rebate.reason}`, 50, height - 230);
+                drawText(`5. Period of Absence: From ${rebate.start_date} To ${rebate.end_date}`, 50, height - 260);
+                drawText(`6. Total No. of Days Leave: ${rebate.number_of_days}`, 50, height - 280);
+                drawText("Signature of the student with date", 50, height - 320);
+
+                drawText("For Office Use Only", 50, height - 370);
+                drawText("Eligible for mess rebate (Yes/No):", 50, height - 400);
+                drawText("Remarks of the Warden:", 50, height - 430);
+                drawText("Signature of the Warden", 50, height - 470);
+                drawText("Chief Warden", 300, height - 470);
+
+                const pdfBytes = await pdfDoc.save();
+
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', 'attachment; filename=mess_rebate.pdf');
+                res.send(pdfBytes);
+            } catch (err) {
+                console.error("PDF generation error:", err);
+                res.status(500).json({ error: "Failed to generate PDF." });
+            }
+        });
+    });
+});
 
 
 // Fetch Mess Menu

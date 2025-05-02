@@ -91,7 +91,7 @@ function RegisterForm() {
     };
 
     try {
-      await axios.post('https://f555-117-200-53-213.ngrok-free.app/send-otp', formData);
+      await axios.post('http://localhost:5000/send-otp', formData);
       alert("OTP sent to your email.");
       setOtpSent(true); // Set OTP sent state to true
     } catch (error) {
@@ -106,7 +106,7 @@ function RegisterForm() {
     setLoading(true);
     const otpData = { name, email, phone, password, username, semester, hostel, room, otp };
     try {
-      await axios.post('https://mybackend.loca.lt/verify-otp', otpData);
+      await axios.post('http://localhost:5000/verify-otp', otpData);
       alert("Registered Successfully!");
       navigate("/login");
     } catch (error) {

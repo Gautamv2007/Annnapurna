@@ -3,7 +3,7 @@ import axios from "axios";
 import { FaUtensils, FaSave, FaCheckCircle, FaEye } from "react-icons/fa";
 import "./MessMenu.css";
 
-const API_URL = "https://mybackend.loca.lt"; // Adjust if needed
+const API_URL = "http://localhost:5000"; // Adjust if needed
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const mealOrder = ["breakfast", "lunch", "snacks", "dinner"]; // Correct meal order

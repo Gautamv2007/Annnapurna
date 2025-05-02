@@ -3,7 +3,7 @@ import axios from "axios";
 import { FaUsers, FaFilter } from "react-icons/fa";
 import "./AttendanceEarnings.css";
 
-const API_URL = "https://mybackend.loca.lt";
+const API_URL = "http://localhost:5000";
 
 function AttendanceEarnings() {
   const [attendanceData, setAttendanceData] = useState([]);
