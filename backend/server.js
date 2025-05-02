@@ -239,8 +239,8 @@ db.query(createAttendanceEarningsTable, (err, result) => {
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: "shikharanu1@gmail.com",
-        pass:"tydiypgjlnriuscc"
+        user: "",
+        pass:""
     }
 });
 
