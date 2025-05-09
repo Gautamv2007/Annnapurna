@@ -16,10 +16,11 @@ import Profile from "./pages/Profile.js";
 import RebateManagement from "./pages/RebateManagement.js";
 import LiveMenu from "./pages/LiveMenu.js";
 import GuestRegistration from "./pages/GuestRegistration.js";
-import WalletIntegration from "./pages/WalletIntegration.js";
 import StudentReviewSystem from "./pages/StudentReviewSystem.js";
 import Footer from './components/Footer';
 import ProfileStudent from "./pages/profile_student";
+import Outpass from "./pages/OutPass.js"; // Import Outpass Page
+import NotFoundPage from './pages/NotFound'; // Import 404 Page
 import './App.css';
 
 function App() {
@@ -42,9 +43,10 @@ function App() {
         <Route path="/student/rebate-management" element={<RebateManagement />} />
         <Route path="/student/live-menu" element={<LiveMenu />} />
         <Route path="/student/guest-registration" element={<GuestRegistration />} />
-        <Route path="/student/wallet-integration" element={<WalletIntegration />} />
         <Route path="/student/review-system" element={<StudentReviewSystem />} />
         <Route path="/student/profile-records" element={<ProfileStudent />} />
+        <Route path="/student/outpass" element={<Outpass />} />
+        <Route path="*" element={<NotFoundPage />} /> {/* 404 Page Route */}
       </Routes>
       <Footer />
     </Router>

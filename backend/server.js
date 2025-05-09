@@ -275,6 +275,28 @@ app.post("/send-otp", (req, res) => {
         res.json({ message: "OTP sent to email" });
     });
 });
+app.post("/send-otp-guest", (req, res) => {
+    const { email } = req.body;
+    const otp = generateOtp();
+    otpStore[email] = { otp, retries: 0 };
+
+    // Send OTP email
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Your OTP for Registration for your guest arrival',
+        text: `Your OTP for registring guest is ${otp}`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error("Error sending OTP email:", error);
+            return res.status(500).json({ error: "Error sending OTP email" });
+        }
+        console.log('Email sent: ' + info.response);
+        res.json({ message: "OTP sent to email" });
+    });
+});
 
 // Verify OTP and Register User
 app.post("/verify-otp", async (req, res) => {
@@ -340,12 +362,153 @@ const authenticateToken = (req, res, next) => {
     if (!token) return res.status(403).json({ error: "Access denied. No token provided." });
 
     jwt.verify(token.split(" ")[1], SECRET_KEY, (err, user) => {
-        if (err) return res.status(401).json({ error: "Invalid token." });
+        if (err) return res.status(401).json({ error: "Please Login Again, Token Expired." });
         req.user = user; // Store user details in request
         next();
     });
 };
+app.post('/api/outpass', authenticateToken, (req, res) => {
+    const { departure_time, return_time, purpose } = req.body;
+    const userId = req.user.id;
+  
+    if (!departure_time || !purpose || !return_time) {
+      return res.status(400).json({ error: 'Departure time, return time, and purpose are required.' });
+    }
+  
+    const depTime = new Date(departure_time);
+    const retTime = new Date(return_time);
+    const now = new Date();
+  
+    // Constraint 1: Return time must be after departure time
+    if (retTime <= depTime) {
+      return res.status(400).json({ error: 'Return time must be after departure time.' });
+    }
+  
+    // Constraint 2: Departure and return must be on same day
+    if (depTime.toDateString() !== retTime.toDateString()) {
+      return res.status(400).json({ error: 'OutPass must be for the same day only.' });
+    }
+  
+    // Constraint 3: Outpass cannot be generated after 6 PM
+    if (now.getHours() >= 18) {
+      return res.status(403).json({ error: 'OutPass cannot be generated after 6 PM. Kindly contact the caretaker.' });
+    }
+  
+    // Constraint 4: Check for overlapping outpasses
+    const checkOverlapQuery = `
+      SELECT * FROM outpass 
+      WHERE user_id = ? 
+      AND DATE(departure_time) = CURDATE()
+      AND (
+        (? BETWEEN departure_time AND return_time)
+        OR
+        (? BETWEEN departure_time AND return_time)
+        OR
+        (departure_time BETWEEN ? AND ?)
+        OR
+        (return_time BETWEEN ? AND ?)
+      )
+    `;
+  
+    db.query(checkOverlapQuery, [
+      userId,
+      departure_time,
+      return_time,
+      departure_time,
+      return_time,
+      departure_time,
+      return_time
+    ], (err, overlapResults) => {
+      if (err) {
+        console.error("Overlap check error:", err);
+        return res.status(500).json({ error: 'Failed to validate OutPass timings.' });
+      }
+  
+      if (overlapResults.length > 0) {
+        return res.status(409).json({ error: 'An OutPass already exists for the selected time window.' });
+      }
+  
+      // Fetch user details
+      const userQuery = `
+        SELECT name, email, phone, semester, hostel, room, branch
+        FROM users
+        WHERE id = ?
+      `;
+  
+      db.query(userQuery, [userId], (err, userResults) => {
+        if (err || userResults.length === 0) {
+          console.error("User fetch error:", err);
+          return res.status(500).json({ error: 'Failed to fetch user details.' });
+        }
+  
+        const user = userResults[0];
+  
+        const insertQuery = `
+          INSERT INTO outpass 
+          (user_id, name, email, phone, semester, hostel, room, branch, departure_time, return_time, purpose)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+  
+        db.query(insertQuery,
+          [userId, user.name, user.email, user.phone, user.semester, user.hostel, user.room, user.branch,
+          departure_time, return_time, purpose],
+          (err, result) => {
+            if (err) {
+              console.error("OutPass insertion error:", err);
+              return res.status(500).json({ error: 'Failed to submit OutPass request.' });
+            }
+            res.status(201).json({ message: 'OutPass request submitted successfully.' });
+          }
+        );
+      });
+    });
+  });
+  app.get('/api/outpasses', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const query = `
+        SELECT 
+            id, name, email, phone, semester, hostel, room, branch, 
+            departure_time, return_time, purpose, status, created_at
+        FROM outpass
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+    `;
 
+    db.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error("Database error:", err);
+            return res.status(500).json({ error: "Failed to fetch outpass requests." });
+        }
+
+        res.json(results);
+    });
+})
+  
+  
+  
+app.get('/api/user-details', authenticateToken, (req, res) => {
+    const query = `
+      SELECT id, name, email, phone, semester, hostel, room, branch 
+      FROM users 
+      WHERE id = ?
+    `;
+  
+    db.query(query, [req.user.id], (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({ error: 'Failed to fetch user data: Database error.' });
+      }
+  
+      if (results.length === 0) {
+        console.log("No user found with ID:", req.user.id);
+        return res.status(404).json({ error: 'User not found.' });
+      }
+  
+      // Successfully got user data
+      console.log("User data fetched successfully for ID:", req.user.id);
+      res.status(200).json(results[0]);
+    });
+});
 
 // Submit Rebate Request
 app.get("/api/rebate/status", (req, res) => {
@@ -449,77 +612,7 @@ app.post("/api/rebate", authenticateToken, (req, res) => {
         });
     });
 });
-app.get('/api/rebate/pdf', authenticateToken, (req, res) => {
-    const userId = req.user.user;
-    console.log("User ID from token:", userId); // Debugging log
 
-    const getUserDetailsQuery = `
-        SELECT name, email, username AS roll_number, semester, branch, hostel AS hall_name, room AS room_no, phone AS mobile_number 
-        FROM users 
-        WHERE id = ?
-    `;
-
-    db.query(getUserDetailsQuery, [userId], (userErr, userResults) => {
-        if (userErr || userResults.length === 0) {
-            return res.status(500).json({ error: "Failed to retrieve user details." });
-        }
-
-        const user = userResults[0];
-
-        const getRebateQuery = `
-            SELECT * FROM mess_rebate 
-            WHERE roll_number = ? 
-            ORDER BY id DESC 
-            LIMIT 1
-        `;
-
-        db.query(getRebateQuery, [user.roll_number], async (rebateErr, rebateResults) => {
-            if (rebateErr || rebateResults.length === 0) {
-                return res.status(404).json({ error: "No rebate record found." });
-            }
-
-            const rebate = rebateResults[0];
-
-            try {
-                const pdfDoc = await PDFDocument.create();
-                const page = pdfDoc.addPage([595, 842]);
-                const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-                const { height } = page.getSize();
-
-                const drawText = (text, x, y) => {
-                    page.drawText(text, { x, y, size: 12, font });
-                };
-
-                drawText("Mess Rebate Form", 230, height - 50);
-                drawText(`Date: ${new Date().toLocaleDateString()}`, 420, height - 70);
-                drawText(`1. Name of the Student: ${user.name}`, 50, height - 100);
-                drawText(`2. Roll Number: ${user.roll_number}`, 50, height - 130);
-                drawText(`   Semester: ${user.semester}   Branch: ${user.branch}`, 50, height - 150);
-                drawText(`3. Hall Name and Room No.: ${user.hall_name}, ${user.room_no}`, 50, height - 180);
-                drawText(`   Mobile Number: ${user.mobile_number}`, 50, height - 200);
-                drawText(`4. Reason: ${rebate.reason}`, 50, height - 230);
-                drawText(`5. Period of Absence: From ${rebate.start_date} To ${rebate.end_date}`, 50, height - 260);
-                drawText(`6. Total No. of Days Leave: ${rebate.number_of_days}`, 50, height - 280);
-                drawText("Signature of the student with date", 50, height - 320);
-
-                drawText("For Office Use Only", 50, height - 370);
-                drawText("Eligible for mess rebate (Yes/No):", 50, height - 400);
-                drawText("Remarks of the Warden:", 50, height - 430);
-                drawText("Signature of the Warden", 50, height - 470);
-                drawText("Chief Warden", 300, height - 470);
-
-                const pdfBytes = await pdfDoc.save();
-
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', 'attachment; filename=mess_rebate.pdf');
-                res.send(pdfBytes);
-            } catch (err) {
-                console.error("PDF generation error:", err);
-                res.status(500).json({ error: "Failed to generate PDF." });
-            }
-        });
-    });
-});
 
 
 // Fetch Mess Menu
@@ -553,21 +646,78 @@ app.post("/api/messmenu", authenticateToken, (req, res) => {
 });
 
 // Register a Guest
-app.post("/api/register-guest", (req, res) => {
-    const { guests } = req.body; // Expecting an array of guests
+app.post("/api/register-guest", authenticateToken, (req, res) => {
+    const { guests, transactionId } = req.body; // Expecting an array of guests and a transaction ID
+    const userId = req.user.id;
 
     if (!guests || guests.length === 0) {
         return res.status(400).json({ error: "Guest details are required." });
     }
 
-    const insertQuery = "INSERT INTO guest_registrations (guest_name, meals, total_bill) VALUES ?";
-    const values = guests.map(guest => [guest.name, JSON.stringify(guest.meals), guest.meals.length * 50]);
+    if (!transactionId) {
+        return res.status(400).json({ error: "Transaction ID is required." });
+    }
 
-    db.query(insertQuery, [values], (err, result) => {
-        if (err) {
-            return res.status(500).json({ error: "Error registering guests" });
+    // Query to fetch user details
+    const userQuery = `
+        SELECT name, email, username AS roll_number, semester, branch, hostel AS hall_name, room AS room_no, phone AS mobile_number 
+        FROM users 
+        WHERE id = ?
+    `;
+
+    db.query(userQuery, [userId], (userErr, results) => {
+        if (userErr || results.length === 0) {
+            console.error("User fetch error:", userErr);
+            return res.status(500).json({ error: "Error retrieving user details." });
         }
-        res.status(201).json({ message: "Guests registered successfully", insertedRows: result.affectedRows });
+
+        const { name, email, roll_number, semester, branch, hall_name, room_no, mobile_number } = results[0];
+
+        // Insert query for guests
+        const insertQuery = `
+            INSERT INTO guest_registrations 
+            (guest_name, meals, total_bill, transaction_id, user_name, user_email, user_roll_number, user_branch, user_semester, user_hall_name, user_room_no, user_mobile_number) 
+            VALUES ?
+        `;
+        const values = guests.map(guest => [
+            guest.name,
+            JSON.stringify(guest.meals),
+            guest.meals.length * 50,
+            transactionId, // Add transaction ID here
+            name,
+            email,
+            roll_number,
+            branch,
+            semester,
+            hall_name,
+            room_no,
+            mobile_number,
+        ]);
+
+        db.query(insertQuery, [values], (insertErr, result) => {
+            if (insertErr) {
+                console.error("Insert error:", insertErr);
+                return res.status(500).json({ error: "Error registering guests." });
+            }
+
+            // Return success response
+            return res.status(201).json({
+                message: "Guests registered successfully",
+                user: {
+                    name,
+                    email,
+                    roll_number,
+                    branch,
+                    semester,
+                    hall_name,
+                    room_no,
+                    mobile_number,
+                },
+                guests,
+                total_bill: guests.reduce((total, guest) => total + guest.meals.length * 50, 0),
+                transaction_id: transactionId, // Include transaction ID in the response
+            });
+        });
     });
 });
 
@@ -644,7 +794,27 @@ app.get("/api/reviews", (req, res) => {
 // Fetch Rebate History
 app.get("/api/rebate", authenticateToken, (req, res) => {
     const userId = req.user.id;
-    const query = "SELECT start_date, end_date, status FROM mess_rebate WHERE roll_number = (SELECT username FROM users WHERE id = ?) ORDER BY start_date DESC";
+    const query = `
+        SELECT 
+            start_date, 
+            end_date, 
+            status,
+            name,
+            roll_number,
+            semester,
+            branch,
+            hall_name,
+            room_no,
+            mobile_number,
+            reason,
+            number_of_days
+        FROM 
+            mess_rebate 
+        WHERE 
+            roll_number = (SELECT username FROM users WHERE id = ?) 
+        ORDER BY 
+            start_date DESC
+    `;
     db.query(query, [userId], (err, results) => {
         if (err) return res.status(500).json({ error: "Failed to retrieve rebates" });
         res.json(results);
@@ -652,11 +822,33 @@ app.get("/api/rebate", authenticateToken, (req, res) => {
 });
 
 // Fetch Guest Registrations
-app.get("/api/guests", authenticateToken, (req, res) => {
+app.get("/api/guests_f", authenticateToken, (req, res) => {
     const userId = req.user.id;
-    const query = "SELECT guest_name, meals, registration_date, status FROM guest_registrations WHERE user_id = ?";
+    console.log("User ID from token:", userId); // Debugging log
+    const query = `
+        SELECT 
+            guest_name,
+            meals,
+            total_bill,
+            transaction_id,
+            user_name,
+            user_email,
+            user_roll_number,
+            user_branch,
+            user_semester,
+            user_hall_name,
+            user_room_no,
+            user_mobile_number,
+            created_at
+        FROM guest_registrations
+        WHERE user_roll_number = (SELECT username FROM users WHERE id = ?)
+        ORDER BY created_at DESC
+    `;
     db.query(query, [userId], (err, results) => {
-        if (err) return res.status(500).json({ error: "Failed to retrieve guests" });
+        if (err) {
+            console.error("Database query failed:", err);
+            return res.status(500).json({ error: "Failed to retrieve guest registrations" });
+        }
         res.json(results);
     });
 });
@@ -791,6 +983,8 @@ app.get("/api/user/:email", (req, res) => {
         res.json(result[0]); 
     });
 });
+
+
 
 // Approve or reject rebate request
 app.post("/api/rebates/update", (req, res) => {

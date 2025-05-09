@@ -198,7 +198,7 @@ function RebateManagement() {
       <h2 id="rebate-title">🎓 Rebate Management</h2>
 
       {submitted ? (
-        <p id="success-message">✅ You have already submitted a rebate request. Next request allowed after {previousEndDate}.</p>
+        <p id="success-message">✅ You have successfully submitted the rebate request.</p>
       ) : (
         <>
           <div id="rebate-form">

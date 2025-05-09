@@ -1,0 +1,57 @@
+#not-found-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: #f8f9fa;
+    color: #343a40;
+    text-align: center;
+    font-family: "Poppins", sans-serif;
+    padding: 20px;
+}
+
+#not-found-container h1 {
+    font-size: 8rem;
+    font-weight: bold;
+    color: #ff4757;
+    margin: 0;
+}
+
+#not-found-container h2 {
+    font-size: 2rem;
+    margin: 10px 0;
+}
+
+#not-found-container p {
+    font-size: 1.2rem;
+    margin: 20px 0;
+    color: #6c757d;
+}
+
+.not-found-buttons {
+    display: flex;
+    gap: 15px;
+}
+
+.not-found-buttons button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    color: white;
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.not-found-buttons button:hover {
+    background: linear-gradient(135deg, #1d8cf8, #1daaf1);
+    transform: scale(1.05);
+    box-shadow: 3px 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.not-found-buttons button:focus {
+    outline: none;
+}
